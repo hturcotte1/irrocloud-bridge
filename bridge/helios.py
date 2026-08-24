@@ -100,7 +100,8 @@ def build_prediction_payload(
             "volumetric_water_content": None,
             "depth_in": float(row.depth_in),
             "source": "irrocloud_bridge",
-            "quality_flag": row.quality_flag,
+            # pandas renders a missing flag as NaN; the schema wants str | None.
+            "quality_flag": None if pd.isna(row.quality_flag) else str(row.quality_flag),
         }
         for row in window.itertuples(index=False)
     ]

@@ -1,0 +1,61 @@
+THIS IS A SAMPLE rendered from built-in synthetic data (offline mode).
+====================================================================
+Subject: Bridge OK — 2026-08-24 — 4/4 fields — through 6:00 am
+
+Morning run finished: OK.
+
+STAGES
+  fetch      OK    4/4 fields from built-in sample data
+  parse      OK    21399 readings cleaned
+  store      OK    saved; duplicates skipped automatically
+  analyze    OK    4/4 fields analyzed
+  weather    OK    canned sample weather (offline)
+  helios     OK    offline stub — 4/4 forecasts, review gate on
+  message    OK    Jacob email composed
+  notify     OK    written to outbox/ (file mode)
+
+WARNINGS
+  - SEND_TO_JACOB is false — Jacob's email goes to Henry only, subject-prefixed [DRY RUN → Jacob].
+
+JACOB'S EMAIL (dry run — not sent to Jacob; shown as it would go out)
+------------------------------------------------------------
+Subject: Helios — Monday Aug 24 — readings through 6:00 am
+
+CUNNINGHAM 6  (corn, 100 ac)
+  12":  39 cb   drying about 4 cb/day   (other probes average 36)
+  18":  23 cb
+  At this rate: reaches your 50 on Thursday morning (Aug 27).  (placeholder trigger 50 cb — reply with your number)
+  Rain in the forecast: none through Thursday.
+  Helios pilot forecast for tomorrow 6:30 am: 42 cb at 12"   (yesterday it said 41; actual was 38)
+
+RV80  (sugarbeet, 73 ac)
+  12":  37 cb   drying about 3 cb/day   (other probes average 34)
+  18":  22 cb
+  At this rate: reaches your 50 on Friday overnight (Aug 28).  (placeholder trigger 50 cb — reply with your number)
+  Rain in the forecast: none through Thursday.
+  Helios pilot forecast for tomorrow 6:30 am: 40 cb at 12"
+
+BENNETT 1 N  (sugarbeet, 98 ac)
+  12":  16 cb   (other probes average 13)
+  18":  10 cb
+  Irrigated or wetted Sun 9:00 pm; new dry-down starting, no rate yet.  (placeholder trigger 50 cb — reply with your number)
+  Rain in the forecast: about 0.3" by Thursday (0.1" in the next 24 hours).
+  Helios pilot forecast for tomorrow 6:30 am: 19 cb at 12"
+
+WHITTED  (corn, 140 ac)
+  12":  62 cb   drying about 4 cb/day   (other probes average 60)
+  18":  35 cb
+  At or past your number (50) since Thu 4:00 pm.  (placeholder trigger 50 cb — reply with your number)
+  Rain in the forecast: none through Thursday.
+  Helios pilot forecast for tomorrow 6:30 am: 65 cb at 12"
+
+Notes:
+  - Bennett 1 N: the recent wetting looks like irrigation, but we could not check rain records this morning.
+
+--
+Helios is in pilot. The forecast line is our model's estimate and we grade it against your sensors every day; over the last two weeks it has been off by about 4.8 cb on average. The model is under review and its forecast is not something to irrigate on by itself.
+The "at this rate" line is plain arithmetic on your own readings. Your trigger number came from you — reply to change it.
+Questions any time: Henry Turcotte.
+
+--
+This is the bridge's own status note. If something is red, open a new Claude Code session on the irrocloud-bridge repository, paste this email, and say "fix this".
