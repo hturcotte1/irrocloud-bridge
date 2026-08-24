@@ -1,0 +1,27 @@
+# Secrets live only here (and in GitHub Actions secrets). Never committed.
+.env
+
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+
+# Emails written to disk in file mode
+outbox/*
+!outbox/.gitkeep
+
+# Discovery output stays local (screenshots and saved HTML can contain
+# account details) — only the human-readable report is committed.
+discovery/*
+!discovery/.gitkeep
+!discovery/REPORT.md
+
+# Dated log files and failure screenshots stay local; logs/last-run.json is
+# committed by the morning workflow so the last outcome is visible on GitHub.
+logs/*.log
+logs/screenshots/
+
+# Local scratch from test runs
+.coverage

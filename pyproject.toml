@@ -1,0 +1,17 @@
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+extend-exclude = ["data", "reports", "discovery"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B"]
+# B008: function call in default argument — used deliberately nowhere, keep on.
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+filterwarnings = [
+    # pandas emits FutureWarnings on some minor-version combinations; the
+    # bridge pins loosely on purpose (throwaway tool), so don't fail on them.
+    "ignore::FutureWarning",
+]

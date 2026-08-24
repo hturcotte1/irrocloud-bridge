@@ -1,0 +1,60 @@
+{
+  "_comment": "One entry per field. 'key' must match the field_key in Jacob's Helios account (lowercase). 'irrocloud_device_name' is the device name exactly as the IrroCloud website shows it — the morning discovery run fills these in. 'probes' maps probe letter to role: 'pivot' (under the pivot; used for the headline numbers) or 'handline' (in handlines; shown but excluded from the headline). REPLACE_ME means a human must answer. 'trigger_cb' is Jacob's irrigation trigger number in centibars; REPLACE_ME uses a placeholder of 50 and says so in every email.",
+  "timezone": "America/Boise",
+  "fields": [
+    {
+      "key": "cunningham-6",
+      "name": "Cunningham 6",
+      "crop": "corn",
+      "acres": 100,
+      "acres_note": "100 under pivot (225 total)",
+      "lat": 43.008861,
+      "lon": -116.145528,
+      "planted": "2026-05-02",
+      "irrocloud_device_name": "REPLACE_ME",
+      "probes": { "a": "pivot", "b": "pivot", "c": "pivot" },
+      "trigger_cb": "REPLACE_ME"
+    },
+    {
+      "key": "rv80",
+      "name": "RV80",
+      "crop": "sugarbeet",
+      "acres": 73,
+      "acres_note": null,
+      "lat": 43.036389,
+      "lon": -116.193333,
+      "planted": "2026-04-09",
+      "irrocloud_device_name": "REPLACE_ME",
+      "probes": { "a": "pivot", "b": "pivot", "c": "pivot" },
+      "trigger_cb": "REPLACE_ME"
+    },
+    {
+      "key": "bennett-1-n",
+      "name": "Bennett 1 N",
+      "crop": "sugarbeet",
+      "acres": 98,
+      "acres_note": null,
+      "lat": 43.04075,
+      "lon": -116.102917,
+      "planted": "2026-03-30",
+      "irrocloud_device_name": "REPLACE_ME",
+      "probes": { "a": "REPLACE_ME", "b": "REPLACE_ME", "c": "REPLACE_ME" },
+      "probes_note": "One probe ('HLS') is in the handlines, not the pivot portion. Which letter that is comes from the morning discovery run; until then all probes are treated as pivot.",
+      "trigger_cb": "REPLACE_ME"
+    },
+    {
+      "key": "whitted",
+      "name": "Whitted",
+      "crop": "corn",
+      "acres": 140,
+      "acres_note": null,
+      "lat": 43.037056,
+      "lon": -116.132,
+      "planted": "2026-04-15",
+      "irrocloud_device_name": "REPLACE_ME",
+      "probes": { "a": "REPLACE_ME", "b": "REPLACE_ME", "c": "REPLACE_ME" },
+      "probes_note": "One probe ('SS') is in solid-set handlines left out all season. Which letter that is comes from the morning discovery run; until then all probes are treated as pivot.",
+      "trigger_cb": "REPLACE_ME"
+    }
+  ]
+}
