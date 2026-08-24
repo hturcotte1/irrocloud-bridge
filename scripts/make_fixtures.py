@@ -97,15 +97,22 @@ def _series_for_field(cfg: dict) -> tuple[list[datetime], dict[tuple[str, int], 
         prior = [e for e in events if e <= t]
         return prior[-1] if prior else stamps[0]
 
+    # A center pivot takes hours to cross a field, so each probe location gets
+    # wet at a different time. This staggering matters: simultaneous resets on
+    # every probe would (correctly) trip HELIOS's "every probe dropped at once"
+    # artifact rule, and no synthetic irrigation would ever count as real.
+    probe_lag_h = {"a": 0, "b": 1, "c": 2}
+
     values: dict[tuple[str, int], list[float]] = {
         (p, d): [] for p in "abc" for d in (12, 18)
     }
     for t in stamps:
         diurnal = 1.2 * math.sin(2 * math.pi * (t.hour - 15) / 24.0)
-        since12 = (t - last_event_before(t, irrigations)).total_seconds() / 86400.0
-        lagged = [e + lag for e in irrigations]
-        since18 = (t - last_event_before(t, lagged)).total_seconds() / 86400.0
         for p in "abc":
+            wet12 = [e + timedelta(hours=probe_lag_h[p]) for e in irrigations]
+            wet18 = [e + lag + timedelta(hours=probe_lag_h[p]) for e in irrigations]
+            since12 = (t - last_event_before(t, wet12)).total_seconds() / 86400.0
+            since18 = (t - last_event_before(t, wet18)).total_seconds() / 86400.0
             v12 = (
                 cfg["base12"]
                 + cfg["rate12"] * since12
