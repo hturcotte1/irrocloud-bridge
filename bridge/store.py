@@ -283,7 +283,7 @@ class Store:
             ]
             if window.empty:
                 continue
-            deltas = pd.Series((window.index - target).abs(), index=window.index)
+            deltas = pd.Series(abs(window.index - target), index=window.index)
             nearest_idx = deltas.idxmin()
             self.conn.execute(
                 "UPDATE forecasts SET actual_cb=?, scored_at=? WHERE rowid=?",
