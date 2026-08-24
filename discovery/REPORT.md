@@ -1,6 +1,6 @@
 # IrroCloud discovery report
 
-Run at 2026-08-24T19:15:48.352054+00:00 against https://www.irrocloud.com.
+Run at 2026-08-24T20:38:28.142207+00:00 against https://www.irrocloud.com.
 This file is committed; screenshots/HTML/network logs stay local (gitignored) because they can contain account details.
 
 ## Devices seen
@@ -19,8 +19,8 @@ This file is committed; screenshots/HTML/network logs stay local (gitignored) be
 
 ## Timezone evidence
 
-- our_clock_utc: 2026-08-24T19:15:54.228893+00:00
-- our_clock_boise: 2026-08-24T13:15:54.228893-06:00
+- our_clock_utc: 2026-08-24T20:38:43.394467+00:00
+- our_clock_boise: 2026-08-24T14:38:43.394467-06:00
 - on_page_time_strings: []
 - export_newest_timestamp: None
 - how_to_read: If the on-page/export times match the Boise clock, exports are local time (the bridge's default assumption). If they match UTC, set TIMEZONE=UTC in .env.
