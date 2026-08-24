@@ -1,9 +1,12 @@
 """Reconstructed HELIOS request schemas (``helios/schemas/inputs.py``).
 
-RECONSTRUCTED from Appendix A of the build brief on 2026-08-24 — the snapshot download
-was blocked by the sandbox network policy. Verify against the real file in the morning
-(see PROVENANCE.md). Request models use ``extra="forbid"``: the bridge authors these
-payloads, so an unknown key is a bug in the bridge, not tolerable drift.
+RECONSTRUCTED from Appendix A of the build brief on 2026-08-24, then VERIFIED the same
+morning against the live service's own /openapi.json (Helios 0.5.0) — see PROVENANCE.md
+for what was corrected. Request models use ``extra="forbid"``: the bridge authors these
+payloads, so an unknown key is a bug in the bridge, not tolerable drift. Where these
+models are STRICTER than the server (a Literal narrower than the server enum, a field
+required that the server defaults), that is deliberate: every payload the bridge
+validates is a payload the server accepts.
 """
 
 from datetime import datetime
@@ -30,11 +33,14 @@ class SoilMoistureReading(BaseModel):
 class WeatherInputPatch(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    temperature_f: float | None = None
-    humidity_pct: float | None = None
-    wind_mph: float | None = None
-    precipitation_in: float | None = None
-    solar_radiation_mj_m2: float | None = None
+    # The scalar bounds mirror the server's; weather_patch_from_snapshot clamps
+    # live Open-Meteo values into these ranges BEFORE building the patch, so a
+    # storm gusting past 80 mph degrades to the cap instead of a 422.
+    temperature_f: float | None = Field(default=None, ge=-40, le=130)
+    humidity_pct: float | None = Field(default=None, ge=0, le=100)
+    wind_mph: float | None = Field(default=None, ge=0, le=80)
+    precipitation_in: float | None = Field(default=None, ge=0, le=12)
+    solar_radiation_mj_m2: float | None = Field(default=None, ge=0, le=35)
     forecast_horizon_hours: int | None = None
     forecast_reference_et_24h_in: float | None = None
     forecast_reference_et_48h_in: float | None = None
@@ -51,6 +57,19 @@ class WeatherInputPatch(BaseModel):
     forecast_precipitation_source: (
         Literal["qpf", "pop_fallback", "caller_supplied", "missing"] | None
     ) = None
+
+
+class FutureIrrigationInput(BaseModel):
+    # The server's field is NOT nullable: sending JSON null draws a 422. The
+    # default state mirrors the server ("missing_evidence" — the bridge has no
+    # knowledge of planned irrigation).
+    model_config = ConfigDict(extra="forbid")
+
+    state: Literal[
+        "no_action", "known_future_irrigation", "unknown_future_irrigation",
+        "missing_evidence",
+    ] = "missing_evidence"
+    applied_in: float | None = Field(default=None, ge=0)
 
 
 class IrrigationSystem(BaseModel):
@@ -85,7 +104,10 @@ class Operational(BaseModel):
 
     field_area_acres: float = Field(gt=0)
     budget_dollars: float = Field(ge=0)
-    budget_constraint_enabled: bool = False
+    # The server's schema defaults this to TRUE when omitted; mirror that so
+    # "unspecified" means the same thing on both sides. (Jacob's saved field
+    # setups carry an explicit false, which passes through unchanged.)
+    budget_constraint_enabled: bool = True
     max_irrigation_volume_in: float | None = None
 
 
@@ -93,27 +115,31 @@ class RecentIrrigationEvent(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     timestamp: datetime
-    applied_in: float
+    applied_in: float = Field(ge=0)
 
 
 class PredictionRequestPayload(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     field_id: str
-    farm_id: str | None = None
+    # Bridge policy, deliberately narrower than the wire schema (the live
+    # OpenAPI types this as a plain integer): the bridge only ever asks for
+    # the documented horizons.
     forecast_horizon_hours: Literal[24, 48, 72]
+    farm_id: str | None = None
     weather: WeatherInputPatch | None = None
     irrigation_system: IrrigationSystem
     soil_moisture_readings: list[SoilMoistureReading] = Field(min_length=1)
     soil_properties: SoilProperties
     crop: Crop
     operational: Operational
-    location_lat: float
-    location_lon: float
+    location_lat: float = Field(ge=-90, le=90)
+    location_lon: float = Field(ge=-180, le=180)
     recent_irrigation_events: list[RecentIrrigationEvent] = Field(default_factory=list)
-    # Appendix A says only "future_irrigation (default)"; the real shape is unknown
-    # tonight, so None (the default) is the only value the bridge ever sends.
-    future_irrigation: None = None
+    # Never null on the wire — the server 422s on JSON null here (verified
+    # against the live OpenAPI). The default object is what "nothing planned"
+    # looks like.
+    future_irrigation: FutureIrrigationInput = Field(default_factory=FutureIrrigationInput)
 
     @model_validator(mode="after")
     def _readings_share_field_and_type(self) -> "PredictionRequestPayload":

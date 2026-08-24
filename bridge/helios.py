@@ -145,10 +145,20 @@ def build_prediction_payload(
             "location_lat": field_setup["location_lat"],
             "location_lon": field_setup["location_lon"],
             "recent_irrigation_events": [],
-            "future_irrigation": None,
+            # {} — never null: the server 422s on JSON null here. The model
+            # fills in the "missing_evidence" default.
+            "future_irrigation": {},
         }
     )
     return payload.model_dump(mode="json")
+
+
+def _clamp(value: float | None, low: float, high: float) -> float | None:
+    """Keep a live weather value inside the server's accepted range — a gust
+    past 80 mph should degrade to the cap, not fail the retry with a 422."""
+    if value is None:
+        return None
+    return min(max(value, low), high)
 
 
 def weather_patch_from_snapshot(
@@ -157,11 +167,11 @@ def weather_patch_from_snapshot(
     """Open-Meteo → the caller-supplied weather patch for the last-resort retry."""
     p24, p48, p72 = snapshot.precip_24_in, snapshot.precip_48_in, snapshot.precip_72_in
     return WeatherInputPatch(
-        temperature_f=snapshot.temperature_f,
-        humidity_pct=snapshot.humidity_pct,
-        wind_mph=snapshot.wind_mph,
-        precipitation_in=snapshot.precipitation_in,
-        solar_radiation_mj_m2=snapshot.solar_radiation_mj_m2,
+        temperature_f=_clamp(snapshot.temperature_f, -40, 130),
+        humidity_pct=_clamp(snapshot.humidity_pct, 0, 100),
+        wind_mph=_clamp(snapshot.wind_mph, 0, 80),
+        precipitation_in=_clamp(snapshot.precipitation_in, 0, 12),
+        solar_radiation_mj_m2=_clamp(snapshot.solar_radiation_mj_m2, 0, 35),
         forecast_horizon_hours=horizon,
         forecast_precipitation_24h_in=p24,
         forecast_precipitation_48h_in=p48,
@@ -193,7 +203,10 @@ def build_run_object(
             "from IrroCloud sensor readings (temporary bridge)."
         ),
         "decision": response.get("decision"),
-        "measurementType": predicted.get("measurement_type", "soil_water_tension"),
+        # The fallback mirrors the live schema's default (VWC), but in practice
+        # the field is always present: runs are only saved for responses that
+        # passed the tension gate in _result_from_response.
+        "measurementType": predicted.get("measurement_type", "vwc_fraction"),
         "recommendedAmountIn": response.get("recommended_amount_in"),
         "uncappedNeedIn": response.get("uncapped_need_in"),
         "caps": response.get("caps"),
@@ -227,7 +240,23 @@ class HeliosResult:
 
 def _result_from_response(field_key: str, doc: dict) -> HeliosResult:
     parsed = PredictionResponse.model_validate(doc)
+    # Helios is dual-mode and its schema DEFAULTS to VWC-fraction. The bridge
+    # only understands tension; anything else must not be passed off as
+    # centibars.
+    if parsed.predicted_moisture.measurement_type != "soil_water_tension":
+        return HeliosResult(
+            field_key=field_key,
+            status="unavailable",
+            error=(
+                "Helios answered in "
+                f"'{parsed.predicted_moisture.measurement_type}', not "
+                "soil_water_tension — refusing to read those numbers as "
+                "centibars."
+            ),
+        )
     persistence = parsed.persistence_baseline
+    if persistence is not None and persistence.measurement_type != "soil_water_tension":
+        persistence = None
     return HeliosResult(
         field_key=field_key,
         status="ok",
@@ -375,10 +404,27 @@ class LiveHelios:
         A missing field is a stop-and-alert — never create fields (§10)."""
         if self._session_doc is None:
             self.login()
-        by_key = {
-            f.get("field_key", "").lower(): f
-            for f in self._session_doc.get("fields", [])
-        }
+        doc = self._session_doc
+        field_docs = doc.get("fields") or []
+        if not field_docs:
+            # The login response's field list is optional; /web/fields returns
+            # the same shape and is the documented confirmation call.
+            response = self._request("GET", "/web/fields")
+            if response.status_code < 400:
+                doc = response.json()
+                field_docs = doc.get("fields") or []
+        by_key = {f.get("field_key", "").lower(): f for f in field_docs}
+        if not by_key:
+            onboarding = " (the account still needs its field setup/onboarding)" if (
+                doc.get("onboarding_required")
+            ) else ""
+            raise AlertError(
+                "Jacob's Helios account returned no saved fields at all"
+                + onboarding
+                + ", so there is nothing to match fields.json against. The "
+                "fields must exist in Helios first — not creating them on my "
+                "own; Henry decides."
+            )
         missing = [f.key for f in fields if f.key not in by_key]
         if missing:
             raise AlertError(

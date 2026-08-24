@@ -150,7 +150,7 @@ class IrroCloudBrowserFetcher:
             return
         from playwright.sync_api import sync_playwright
 
-        from bridge.fetchers._launch import chromium_launch_kwargs
+        from bridge.fetchers._launch import chromium_launch_kwargs, install_context_routing
 
         self._started_at = time.monotonic()
         self._playwright = sync_playwright().start()
@@ -158,6 +158,7 @@ class IrroCloudBrowserFetcher:
             headless=self.headless, slow_mo=self.slow_mo_ms, **chromium_launch_kwargs()
         )
         context = self._browser.new_context(viewport=VIEWPORT, user_agent=USER_AGENT)
+        install_context_routing(context)
         self._page = context.new_page()
         page = self._page
 

@@ -301,14 +301,20 @@ def _load_field(entry: dict, index: int) -> FieldConfig:
     )
 
 
-def load_config(root: Path | None = None, environ: dict[str, str] | None = None) -> Config:
+def load_config(
+    root: Path | None = None,
+    environ: dict[str, str] | None = None,
+    env_file: bool = True,
+) -> Config:
     """Build the Config. ``root`` defaults to the repository root (the folder
-    containing fields.json); tests pass a temp dir and their own environ."""
+    containing fields.json); tests pass a temp dir and their own environ.
+    ``env_file=False`` skips reading ``root/.env`` — the golden samples use it
+    so their output never depends on the operator's local settings."""
     if root is None:
         root = Path(__file__).resolve().parent.parent
     environ = dict(os.environ if environ is None else environ)
 
-    values = _parse_env_file(root / ".env")
+    values = _parse_env_file(root / ".env") if env_file else {}
     for key in _KNOWN_KEYS:
         if key in environ and environ[key].strip():
             values[key] = environ[key]

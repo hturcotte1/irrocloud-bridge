@@ -16,7 +16,11 @@ NEXT.md. "The brief" is the build document this repo was built from.
    (`bridge/_helios_schemas/`, see its PROVENANCE.md). Request models reject
    unknown keys (a typo in our payload should fail loudly); response models
    accept extra keys (the live server may return more than Appendix A
-   listed). **VERIFY**: replace with verbatim copies from the snapshot.
+   listed). ~~**VERIFY**: replace with verbatim copies from the snapshot.~~
+   **DONE (morning of Aug 24):** verified field-by-field against the live
+   service's own `/openapi.json` instead (the snapshot repo is not
+   accessible); eight real divergences found and fixed — the worst would have
+   422-rejected every live forecast. Details in PROVENANCE.md.
 
 ## Parsing and time
 

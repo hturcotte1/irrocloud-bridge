@@ -44,7 +44,7 @@ CANNED_YESTERDAY = {"cunningham-6": (41.0, 38.0)}
 
 
 def build_sample_emails() -> tuple[EmailPayload, EmailPayload]:
-    cfg = load_config(root=REPO_ROOT, environ={})
+    cfg = load_config(root=REPO_ROOT, environ={}, env_file=False)
     offline = OfflineHelios()
     reports: list[FieldReport] = []
     total_readings = 0

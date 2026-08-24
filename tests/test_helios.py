@@ -50,6 +50,12 @@ def test_payload_validates_and_windows(synthetic_dir):
     assert {r.source for r in parsed.soil_moisture_readings} == {"irrocloud_bridge"}
     oldest = min(r.timestamp for r in parsed.soil_moisture_readings)
     assert (NOW - oldest).total_seconds() <= 72 * 3600
+    # The live server rejects JSON null here (422, verified against its
+    # OpenAPI on 2026-08-24); the wire value must be the default object.
+    assert payload["future_irrigation"] == {
+        "state": "missing_evidence",
+        "applied_in": None,
+    }
 
 
 def test_payload_caps_keep_newest(synthetic_dir):
@@ -166,7 +172,8 @@ def _ok_response_doc():
                 "location_lat": 43.0,
                 "location_lon": -116.1,
                 "recent_irrigation_events": [],
-                "future_irrigation": None,
+                # {} — never null; the live server 422s on JSON null here.
+                "future_irrigation": {},
             }
         )
     }

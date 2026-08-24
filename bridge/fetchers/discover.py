@@ -108,7 +108,7 @@ def run_discovery(cfg: Config, headless: bool = True) -> int:
             pass
         network.append(entry)
 
-    from bridge.fetchers._launch import chromium_launch_kwargs
+    from bridge.fetchers._launch import chromium_launch_kwargs, install_context_routing
 
     exit_code = 0
     with sync_playwright() as playwright:
@@ -116,6 +116,7 @@ def run_discovery(cfg: Config, headless: bool = True) -> int:
             headless=headless, slow_mo=200, **chromium_launch_kwargs()
         )
         context = browser.new_context(viewport=VIEWPORT, user_agent=USER_AGENT)
+        install_context_routing(context)
         page = context.new_page()
         page.on("request", on_request)
         page.on("response", on_response)

@@ -3,7 +3,17 @@
 **Provenance:** the live snapshot download of the HELIOS repository was blocked by this
 sandbox's network policy on 2026-08-24 (the proxy returned HTTP 403). Everything below is
 taken from Appendix A of the build brief, which was extracted from the same snapshot on
-2026-08-23. **Verify these facts against the real snapshot in the morning** (see NEXT.md).
+2026-08-23.
+
+**Update, morning of 2026-08-24:** the snapshot is still unreachable (no accessible
+GitHub repo holds the HELIOS source), but every **API shape** below was verified
+field-by-field against the deployed service's own `GET /openapi.json` (Helios 0.5.0,
+committed as `docs/helios-openapi-2026-08-24.json`) — corrections are recorded in
+`bridge/_helios_schemas/PROVENANCE.md`. The **server-internal** facts (parser rules,
+constants, `_select_primary_sensor`, `mapApiRun`, `MAX_PHYSICAL_SENSOR_COUNT`) are NOT
+covered by the OpenAPI and remain Appendix-A provenance — verify them against the real
+source when Marco shares it. The live `/health` endpoint independently confirms the
+tension model's quarantine (`QUARANTINED_PILOT_FAIL`, promotion_allowed false).
 
 ## Parser rules (`helios/scripts/parse_irrocloud_data.py`)
 

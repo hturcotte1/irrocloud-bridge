@@ -1,9 +1,12 @@
 """Reconstructed HELIOS response schemas (``helios/schemas/outputs.py``).
 
-RECONSTRUCTED from Appendix A of the build brief on 2026-08-24 — the snapshot download
-was blocked by the sandbox network policy. Verify against the real file in the morning
-(see PROVENANCE.md). Response models use ``extra="allow"``: the live server may return
-fields Appendix A did not list, and that must not fail validation.
+RECONSTRUCTED from Appendix A of the build brief on 2026-08-24, then VERIFIED the same
+morning against the live service's own /openapi.json (Helios 0.5.0) — see PROVENANCE.md
+for what was corrected. Response models use ``extra="allow"``, and enum-valued fields
+stay plain ``str`` on purpose: the live server may return values these models have not
+seen, and that must not fail validation. The DEFAULTS mirror the live schema exactly —
+notably, Helios is dual-mode and its default measurement is VWC-fraction, NOT tension,
+so nothing may assume centibars without checking ``measurement_type``.
 """
 
 from typing import Any, Literal
@@ -23,8 +26,10 @@ class MoistureForecast(BaseModel):
     moisture_24h: float | None = None
     moisture_48h: float | None = None
     moisture_72h: float | None = None
-    measurement_type: str = "soil_water_tension"
-    unit: str = "centibar"
+    # Live enum: "vwc_fraction" | "soil_water_tension", defaulting to VWC —
+    # readers must check this before treating the numbers as centibars.
+    measurement_type: str = "vwc_fraction"
+    unit: str = "fraction"
 
 
 class PersistenceBaseline(BaseModel):
@@ -34,8 +39,9 @@ class PersistenceBaseline(BaseModel):
     moisture_48h: float | None = None
     moisture_72h: float | None = None
     method: str = "driest_zone_carry_forward"
-    measurement_type: str = "soil_water_tension"
-    unit: str = "centibar"
+    # Same dual-mode caveat as MoistureForecast: VWC is the live default.
+    measurement_type: str = "vwc_fraction"
+    unit: str = "fraction"
 
 
 class RecommendationExplanation(BaseModel):
@@ -47,8 +53,9 @@ class RecommendationExplanation(BaseModel):
     zone_moisture_summary: dict[str, float] = Field(default_factory=dict)
     high_variability_flag: bool = False
     operator_review_required: bool = False
-    measurement_type: str = "soil_water_tension"
-    unit: str = "centibar"
+    # Same dual-mode caveat as MoistureForecast: VWC is the live default.
+    measurement_type: str = "vwc_fraction"
+    unit: str = "fraction"
     dry_threshold: float | None = None
     wet_threshold: float | None = None
     interpretation: str | None = None
@@ -57,12 +64,20 @@ class RecommendationExplanation(BaseModel):
     drip_physics_status: str | None = None
 
 
+class ReferenceEvapotranspiration(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
+    value: float | None = None
+    unit: str = "inch_per_day"
+
+
 class PredictionResponse(BaseModel):
     model_config = ConfigDict(extra="allow")
 
     decision: Literal["water", "wait"]
     recommended_amount_in: float | None = None
-    uncapped_need_in: float | None = None
+    # Non-nullable on the wire, defaulting to 0 (the live schema's shape).
+    uncapped_need_in: float = 0.0
     caps: Any = None
     binding_constraint: str | None = None
     final_amount_in: float | None = None
@@ -71,7 +86,8 @@ class PredictionResponse(BaseModel):
     confidence_caveat: str | None = None
     et_source: str | None = None
     et_is_fallback: bool | None = None
-    reference_et: float | None = None
+    # An OBJECT on the wire ({value, unit}), never a bare number.
+    reference_et: ReferenceEvapotranspiration | None = None
     explanation: RecommendationExplanation
     predicted_moisture: MoistureForecast
     forecast_source: str = "xgboost"
