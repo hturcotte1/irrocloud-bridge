@@ -5,13 +5,23 @@
 > session hit one hard blocker only a human can clear:
 >
 > **The IrroCloud login was rejected.** The site quietly re-shows its login
-> form for `jbriscoe@gmail.com` / the password Henry supplied (verified two
-> independent ways; the site shows no error text, so it looks identical to a
-> typo). Nothing is wrong with the browser automation — it reaches the real
-> login page and posts correctly. **Henry: re-check the password with Jacob**
-> (capitalization matters), then open a session and say "read NEXT.md, then
-> do it" with the corrected login. The session deliberately did NOT try
-> password variations — guessing could lock Jacob's account.
+> form for the credentials Henry supplied (verified two independent ways;
+> the site shows no error text, so it looks identical to a typo). Nothing is
+> wrong with the browser automation — it reaches the real login page and
+> posts correctly. The session deliberately did NOT try password variations —
+> guessing could lock Jacob's account.
+>
+> **Second attempt, later on Aug 24:** Henry supplied
+> `jacobbriscoe21@gmail.com` / the same password for BOTH IrroCloud and
+> Helios. **Both services reject it.** IrroCloud silently re-shows the form
+> (for this email and for `jbriscoe@gmail.com` alike), and Helios answers in
+> plain words: `"Invalid email or password."` for either email. Two
+> independent systems rejecting the same password points at the password —
+> or, for Helios, at an account that does not exist yet (ask Marco whether
+> Jacob was ever registered). **The reliable fix: have Jacob log into
+> irrocloud.com AND the Helios page himself in a normal browser, and write
+> down exactly what worked** — exact email, exact capitalization. IrroCloud
+> also has a "Recover Password" link he can use.
 >
 > Done this morning (details in the sections below):
 > - `.env` is filled in with everything Henry has; `setup-check` passes for
