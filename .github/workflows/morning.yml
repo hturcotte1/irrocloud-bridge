@@ -1,0 +1,94 @@
+# The morning run: fetch IrroCloud, ask Helios, email the summary.
+#
+# IMPORTANT (also in README and NEXT.md): GitHub only runs scheduled workflows
+# from the repository's DEFAULT branch (main). Until the bridge branch is
+# merged to main, this schedule does not fire — merge first, then run it once
+# by hand from the Actions tab to confirm it is green.
+
+name: Morning bridge run
+
+on:
+  schedule:
+    # GitHub crons are UTC. This is 5:15 am America/Boise while Mountain
+    # DAYLIGHT Time (UTC-6) is in effect — 45 minutes of slack before Jacob's
+    # 6:00 am. After the clocks change in early November (Mountain STANDARD
+    # Time, UTC-7), change this line to:   - cron: "15 12 * * *"
+    - cron: "15 11 * * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write # to commit data/ and logs/last-run.json back
+
+concurrency:
+  group: morning-bridge
+  cancel-in-progress: false # never let two runs overlap or kill each other
+
+jobs:
+  morning:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      # Modes are pinned here on purpose — a stray .env cannot flip them.
+      FETCHER: browser
+      HELIOS_MODE: live
+      NOTIFY_MODE: smtp
+      # SEND_TO_JACOB comes from a secret so Henry can flip it on the GitHub
+      # website (Settings → Secrets and variables → Actions) without editing
+      # any code. false = Jacob's email goes to Henry with [DRY RUN → Jacob].
+      SEND_TO_JACOB: ${{ secrets.SEND_TO_JACOB }}
+      IRROCLOUD_URL: ${{ secrets.IRROCLOUD_URL }}
+      IRROCLOUD_EMAIL: ${{ secrets.IRROCLOUD_EMAIL }}
+      IRROCLOUD_PASSWORD: ${{ secrets.IRROCLOUD_PASSWORD }}
+      HELIOS_URL: ${{ secrets.HELIOS_URL }}
+      HELIOS_EMAIL: ${{ secrets.HELIOS_EMAIL }}
+      HELIOS_PASSWORD: ${{ secrets.HELIOS_PASSWORD }}
+      SMTP_HOST: ${{ secrets.SMTP_HOST }}
+      SMTP_PORT: ${{ secrets.SMTP_PORT }}
+      SMTP_USER: ${{ secrets.SMTP_USER }}
+      SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+      HENRY_EMAIL: ${{ secrets.HENRY_EMAIL }}
+      JACOB_EMAIL: ${{ secrets.JACOB_EMAIL }}
+      HENRY_PHONE: ${{ secrets.HENRY_PHONE }}
+      TIMEZONE: ${{ secrets.TIMEZONE }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Install the browser
+        run: playwright install --with-deps chromium
+
+      - name: Morning run
+        run: python -m bridge.cli run
+
+      - name: Upload evidence when something failed
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: bridge-evidence-${{ github.run_id }}
+          path: |
+            discovery/
+            logs/
+          if-no-files-found: ignore
+          retention-days: 14
+
+      # The repo is the bridge's memory: Actions machines are wiped after
+      # every run, so readings, forecasts, and the sent-log must be committed
+      # back or tomorrow's run starts amnesiac. This runs even when the run
+      # failed, so partial data and the failure log survive too.
+      - name: Commit data and log back
+        if: always()
+        run: |
+          git config user.name "irrocloud-bridge"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/ logs/last-run.json || true
+          STATUS=$(python -c "import json; print(json.load(open('logs/last-run.json')).get('status','FAIL'))" 2>/dev/null || echo "FAIL")
+          DATE=$(date -u +%F)
+          git commit -m "bridge: ${DATE} ${STATUS} [skip ci]" || echo "nothing new to commit"
+          git push
