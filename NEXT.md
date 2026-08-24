@@ -1,5 +1,20 @@
 # NEXT — the morning checklist
 
+> **Found on the morning of Aug 24:** this Claude Code cloud environment's
+> network policy blocks ALL the live services the bridge needs (IrroCloud,
+> Helios, the weather service, Gmail — and the HELIOS snapshot). Steps 2–4
+> cannot run from this sandbox until that changes. The fix is a one-time
+> settings change: on claude.ai/code, open this repository's **environment
+> settings → network access** and either allow full network access or add
+> these to the allowed list: `www.irrocloud.com`,
+> `irrigant-helios.up.railway.app`, `api.open-meteo.com`,
+> `archive-api.open-meteo.com`, `smtp.gmail.com`, `api.github.com`.
+> Then start a fresh session (the running machine keeps the old policy) and
+> say "read NEXT.md, then do it" again. Fallback if the policy cannot
+> change: run the live steps through GitHub Actions instead (it has open
+> internet) — do step 6's secrets first, then run the workflow from the
+> branch via the Actions tab.
+
 Henry: do these in order. The fastest way through is to open a Claude Code
 session on this repository and say **"read NEXT.md, then do it"** — it will
 ask you for the values in step 1 and drive the rest, pausing where only you
