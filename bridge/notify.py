@@ -44,6 +44,10 @@ def _write_to_outbox(cfg: Config, to: list[str], payload: EmailPayload, tag, now
     cfg.outbox_dir.mkdir(parents=True, exist_ok=True)
     stamp = pd.Timestamp(now_utc).tz_convert(cfg.tz).strftime("%Y-%m-%dT%H%M")
     path = cfg.outbox_dir / f"{stamp}-{_slug(tag)}.txt"
+    counter = 2
+    while path.exists():  # a re-run in the same minute must not overwrite
+        path = cfg.outbox_dir / f"{stamp}-{_slug(tag)}-{counter}.txt"
+        counter += 1
     lines = [
         f"To: {', '.join(to) if to else '(no recipient configured — REPLACE_ME in .env)'}",
         f"Subject: {payload.subject}",
