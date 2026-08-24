@@ -17,8 +17,6 @@ import time
 from datetime import UTC, date, datetime
 from pathlib import Path
 
-import pandas as pd
-
 from bridge.config import Config, FieldConfig
 from bridge.errors import AlertError
 from bridge.fetchers.base import raw_export_path

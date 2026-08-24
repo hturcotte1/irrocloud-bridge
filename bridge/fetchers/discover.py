@@ -369,7 +369,7 @@ def _render_report(cfg: Config, report: dict) -> str:
                      f"range {report['export']['date_range_tried']}.")
         lines.append(f"- Saved as `{report['export']['saved_as']}` (gitignored).")
         lines.append("- First lines:")
-        lines += [f"  ```", *[f"  {line}" for line in report["export"]["first_lines"]],
+        lines += ["  ```", *[f"  {line}" for line in report["export"]["first_lines"]],
                   "  ```"]
     else:
         lines.append("- No export was captured — see problems below.")

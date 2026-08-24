@@ -9,7 +9,6 @@ code (build brief §6). Skipped with a clear reason when no Chromium can start.
 from __future__ import annotations
 
 import json
-import shutil
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
