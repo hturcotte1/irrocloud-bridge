@@ -1,153 +1,102 @@
 # NEXT — the morning checklist
 
-> **Status after the Aug 24 morning session** (values from Henry's step 1
-> applied): the network is partly unblocked and a lot got done — but the
-> session hit one hard blocker only a human can clear:
+> **Status after Aug 24, evening session (working credentials in hand):
+> steps 1–4 are DONE except email.** The bridge ran END TO END against the
+> real world tonight, several times:
 >
-> **The IrroCloud login was rejected.** The site quietly re-shows its login
-> form for the credentials Henry supplied (verified two independent ways;
-> the site shows no error text, so it looks identical to a typo). Nothing is
-> wrong with the browser automation — it reaches the real login page and
-> posts correctly. The session deliberately did NOT try password variations —
-> guessing could lock Jacob's account.
+> - Logged into the real IrroCloud as Jacob, mapped all 22 devices, and
+>   confirmed the four field mappings (see `discovery/REPORT.md`).
+> - Back-filled the ENTIRE season — ~40,000 readings per field, newest
+>   within the hour — and rebuilt `reports/season-replay.html` from real
+>   data. Re-running stores 0 new rows: dedupe proven live.
+> - Ran the full morning pipeline with live Helios: 4/4 fields fetched,
+>   analyzed, weather from Open-Meteo (works from this sandbox after all),
+>   4/4 live forecasts, and 4/4 runs SAVED into Jacob's Helios history
+>   (`bridge-field-N-2026-08-24` — visible in his app). The run shape was
+>   read from his real history and a same-day re-run overwrites instead of
+>   duplicating (verified).
+> - Jacob's morning email, built from his real sensors, is waiting as a
+>   dry-run in `outbox/` — worth reading with coffee.
 >
-> **Second attempt, later on Aug 24:** Henry supplied
-> `jacobbriscoe21@gmail.com` / the same password for BOTH IrroCloud and
-> Helios. **Both services reject it.** IrroCloud silently re-shows the form
-> (for this email and for `jbriscoe@gmail.com` alike), and Helios answers in
-> plain words: `"Invalid email or password."` for either email. Two
-> independent systems rejecting the same password points at the password —
-> or, for Helios, at an account that does not exist yet (ask Marco whether
-> Jacob was ever registered). **The reliable fix: have Jacob log into
-> irrocloud.com AND the Helios page himself in a normal browser, and write
-> down exactly what worked** — exact email, exact capitalization. IrroCloud
-> also has a "Recover Password" link he can use.
->
-> Done this morning (details in the sections below):
-> - `.env` is filled in with everything Henry has; `setup-check` passes for
->   the current safe modes.
-> - The browser stack now works inside the Claude sandbox (its egress proxy
->   needed three accommodations, all committed and inert elsewhere), and it
->   reaches the real IrroCloud login page — selectors confirmed right.
-> - The reconstructed Helios schemas were **verified against the live
->   service's own OpenAPI** (committed as
->   `docs/helios-openapi-2026-08-24.json`). Eight real divergences were found
->   and fixed — the worst meant **every live forecast call would have been
->   rejected (HTTP 422)**. See `bridge/_helios_schemas/PROVENANCE.md`.
-> - Jacob's **written OK for automated access: Henry says it is in hand**
->   (recorded Aug 24). Step 7 still waits for email to exist and dry-runs to
->   be reviewed.
->
-> Still missing (the session will ask again):
-> - the **corrected IrroCloud password** — blocks steps 2, 3, 4;
-> - **Jacob's Helios login** — blocks the live Helios part of step 4;
-> - the **Gmail address + app password** — blocks test-email and step 6;
-> - **Jacob's trigger numbers** — emails keep saying "placeholder trigger
->   50 cb — reply with your number" until then.
->
-> Sandbox notes for the next session: Open-Meteo and Gmail SMTP are still
-> unreachable from this sandbox (weather degrades gracefully; email stays in
-> file mode) — both work from GitHub Actions, which has open internet. The
-> browser needs no special setup any more; the code finds the sandbox's
-> Chromium and proxy on its own.
+> **What still stands between here and "runs itself every morning":**
+> 1. **Gmail app password** (step 1) — email is the only untested stage;
+>    everything goes to `outbox/` files until this exists.
+> 2. **Merge + secrets on GitHub** (steps 5–6, best done together).
+> 3. **Jacob's trigger numbers** — placeholder 50 cb until he replies.
+> 4. **The Jacob switch** (step 7) — his written OK is recorded (Aug 24);
+>    flip after one good dry-run morning on GitHub.
 
 Henry: do these in order. The fastest way through is to open a Claude Code
-session on this repository and say **"read NEXT.md, then do it"** — it will
-ask you for the values in step 1 and drive the rest, pausing where only you
-can click or decide. Nothing has been sent to anyone, and nothing will be
-sent to Jacob until step 7.
+session on this repository and say **"read NEXT.md, then do it"**.
 
 ---
 
-## 1. Have these values ready (the session will ask for them)
+## 1. Values — all in `.env` except:
 
-Filled in on Aug 24 where Henry had them (in `.env`, which stays on this
-machine and is never committed):
-
-- **Helios web address** — DONE: `https://irrigant-helios.up.railway.app`
-  (reachable, version 0.5.0, healthy).
-- **Jacob's Helios login** — STILL NEEDED. The bridge saves each morning's
-  run into *his* history; without it Helios stays in offline mode.
-- **IrroCloud login** — NEEDS RE-CHECKING: the site rejects
-  `jbriscoe@gmail.com` with the password supplied on Aug 24. Confirm both
-  with Jacob, exactly as typed.
 - **The Gmail address to send from, and its app password** — STILL NEEDED.
   Click path: Google Account → Security → 2-Step Verification on → App
   passwords → create one named "helios bridge" → copy the 16 characters.
-- **Your email** — DONE: `henrylachtur@gmail.com`.
-- **Jacob's email** — DONE: `jbriscoe@gmail.com`.
-- **Your phone** — DONE: `208-994-8295` (goes at the bottom of Jacob's email).
-- **What time Jacob starts his morning** — DONE: 6:00 am confirmed; the
-  5:15 am schedule in `.github/workflows/morning.yml` already fits. No change.
+  Put them in `.env` as SMTP_USER / SMTP_PASSWORD.
 - **Jacob's trigger number** — STILL NEEDED (per field if different); until
-  then every email says "placeholder trigger 50 cb — reply with your number".
-- **Jacob's written OK for automated access** — DONE: yes, per Henry, Aug 24.
+  then every email says "placeholder trigger 50 cb — reply with your
+  number". Set in `fields.json` (`trigger_cb`).
 
-Check with: `python3 -m bridge.cli setup-check`.
+Everything else is in and PROVEN: IrroCloud login, Jacob's Helios login
+(same email/password works on both), Henry's email/phone, the 6:00 am
+schedule, and Jacob's written OK (recorded Aug 24).
 
-## 2. Map the real IrroCloud site — BLOCKED on the corrected login
+## 2. ~~Map the real IrroCloud site~~ DONE (Aug 24)
 
-Once the corrected password is in `.env`, run:
-`python3 -m bridge.cli discover`
+`discovery/REPORT.md` lists all 22 devices with their ids. The four fields
+are mapped in `fields.json` (name + numeric device id + Helios field key).
+Two findings that changed the plan, both handled:
 
-The Aug 24 attempt got as far as the real login form (see
-`discovery/REPORT.md` and `discovery/02-login-failed.png` locally): the page
-matches the existing selectors, so with a working password this should run
-clean. Then, with the report:
+- **The handline sensors are separate devices** (`SB Bennett 1 N HLS`,
+  `SB Whitted SS`), not probe letters — the bridge doesn't fetch them, so
+  every probe on the pivot devices counts as pivot. No probe-role question
+  remains.
+- **Exports are UTC** with explicit `+00:00` offsets; the parser reads them
+  correctly as-is and emails render in Boise time. `TIMEZONE` stays
+  `America/Boise`.
+- The fetcher now uses the site's own CSV endpoint (`csv?&id=<device id>`,
+  full history in one request) instead of clicking through pages — fewer
+  moving parts; the click path remains as fallback. Re-running
+  `python3 -m bridge.cli discover` works any time the site changes.
 
-- Confirm which IrroCloud device belongs to which field, and put each exact
-  device name into `fields.json` (`irrocloud_device_name`).
-- Identify which probe letter (a/b/c) is the **handline** probe on
-  **Bennett 1 N** (called "HLS") and on **Whitted** (called "SS"), and set
-  those roles in `fields.json`. Until then all probes count toward the
-  headline numbers.
-- Confirm the export's timezone (if exports turn out to be UTC, set
-  `TIMEZONE=UTC` in `.env`).
-- If any discovery step failed, adjust the SELECTORS block at the top of
-  `bridge/fetchers/irrocloud_browser.py` — that block is the only
-  site-specific part.
-- If the login shows a code-by-text step or a captcha, a human does it once
-  in a normal browser first, then re-run discover.
+## 3. ~~Back-fill the season~~ DONE (Aug 24)
 
-## 3. Back-fill the season — after step 2
+Full history stored (the CSV endpoint returns everything, so this reaches
+well past July 1): Cunningham 6 42,168 readings; RV80 39,098; Bennett 1 N
+39,607; Whitted 40,270 — all with newest timestamps minutes old.
+`reports/season-replay.html` is rebuilt from the real season.
 
-Run: `python3 -m bridge.cli fetch --days 60`
+## 4. First live run — DONE except email (Aug 24)
 
-(Helios's stored data ends July 8, so this reaches back to July 1 with
-margin.) It prints, per field, how many readings were stored and the newest
-timestamp — sanity-check those against what the IrroCloud site shows. Then
-`python3 -m bridge.cli replay` rebuilds `reports/season-replay.html` from
-real data — worth a look before Jacob ever sees anything.
+Ran repeatedly with `FETCHER=browser`, `HELIOS_MODE=live`,
+`NOTIFY_MODE=file`, `SEND_TO_JACOB=false`:
 
-## 4. First live run (still a dry run for Jacob)
+- 4/4 fetched + analyzed; Open-Meteo weather 4/4 (and Helios's own NOAA
+  source failed server-side, so the bridge's caller-supplied weather
+  fallback carried the forecasts — worth mentioning to Marco).
+- 4/4 live forecasts; **4/4 saved into Jacob's Helios history** with
+  deterministic ids (`bridge-field-N-<date>`); re-runs overwrite.
+- Occasional 502s from Helios on individual fields degrade honestly
+  ("unavailable this morning") and clear on the next run.
+- Jacob's email + Henry's status email are in `outbox/` as files.
 
-- `python3 -m bridge.cli test-email` — needs the Gmail app password, and
-  must run somewhere that can reach Gmail (GitHub Actions, or Henry's own
-  machine — NOT the Claude sandbox, which blocks SMTP).
-- Set in `.env`: `FETCHER=browser`, `HELIOS_MODE=live` (needs Jacob's Helios
-  login), `NOTIFY_MODE=smtp`, `SEND_TO_JACOB=false`, then:
-  `python3 -m bridge.cli run`
-- Read the status email it sends you, including Jacob's email as it would go
-  out.
-- **Confirm the run shows up in Jacob's Helios history.** The first live
-  attempt will probably SKIP the save on purpose: the exact "run" shape
-  could not be confirmed (the server accepts any object — the shape
-  discipline is the Helios frontend's, verified Aug 24), so the bridge
-  templates it from the newest entry in Jacob's history (`GET /web/runs`)
-  and refuses to save until the shapes match. The session fixes that here by
-  reading his history and extending `build_run_object` in `bridge/helios.py`
-  to match, then re-running (a re-run overwrites, never duplicates).
-  Jacob's history being EMPTY also skips the save — then someone must do one
-  run in the Helios web app first, or Marco supplies `mapApiRun` from
-  `src/api/run-builders.js`.
+Remaining here once the Gmail app password exists:
+`python3 -m bridge.cli test-email`, then set `NOTIFY_MODE=smtp` in `.env`
+and `python3 -m bridge.cli run --force` — read the real status email in
+your inbox. (Run this somewhere that can reach Gmail: GitHub Actions or
+your own machine — NOT the Claude sandbox, which blocks SMTP.)
 
 ## 5. Merge, so the schedule can exist
 
-GitHub only runs schedules from the **main** branch. Create the pull request
-from the Claude Code screen for branch
-`claude/irrocloud-helios-bridge-qnxh1o`, then merge it on GitHub. (Best
-done together with step 6 — a merged schedule with no secrets sends red
-runs every morning.)
+GitHub only runs schedules from the **main** branch. Create the pull
+request from the Claude Code screen for branch
+`claude/irrocloud-helios-bridge-qnxh1o`, then merge it on GitHub. Best done
+together with step 6 — a merged schedule with no secrets sends red runs
+every morning.
 
 ## 6. Secrets, then one manual run on GitHub
 
@@ -157,42 +106,38 @@ runs every morning.)
   signed in: `./scripts/push-secrets.sh`.
 - Then: **Actions** tab → **Morning bridge run** → **Run workflow**. Confirm
   it goes green and the status email arrives. From tomorrow it runs itself
-  at 5:15 am Boise time.
+  at 5:15 am Boise time (email waiting by 6:00).
 
 ## 7. The Jacob switch
 
-Jacob's written OK is in hand (per Henry, Aug 24). Once steps 4–6 look
-right — Henry has read at least one `[DRY RUN → Jacob]` email and the run is
-green on GitHub — change the **SEND_TO_JACOB** secret on GitHub to `true`
-(and in `.env` if you also run it by hand). Until then he receives nothing;
-you receive his emails marked `[DRY RUN → Jacob]`.
+Jacob's written OK is in hand (recorded Aug 24). Once step 6's run is green
+and you have read at least one `[DRY RUN → Jacob]` email in your inbox:
+change the **SEND_TO_JACOB** secret on GitHub to `true` (and in `.env` if
+you also run it by hand). Until then he receives nothing.
 
-## 8. Verified / still open (was: what could not be done overnight)
+## 8. Verified / still open
 
-- **HELIOS reference snapshot** — the repo itself is still inaccessible (no
-  accessible GitHub repository holds the HELIOS app source; the tarball 403
-  was never about network alone). DONE INSTEAD (Aug 24): all **API shapes**
-  verified against the live service's `/openapi.json` and corrected — see
-  `bridge/_helios_schemas/PROVENANCE.md` for the eight real fixes, including
-  one that would have 422-failed every live forecast. STILL OPEN: the
-  server-internal facts (parser rules, constants, `MAX_PHYSICAL_SENSOR_COUNT`,
-  `mapApiRun`) — need Marco to share the source; the bridge's conservative
-  caps and template-matched saves cover the gap safely.
-- **Open-Meteo** — still unreachable from the Claude sandbox; the run
-  degrades to "rain forecast unavailable" (tested path). Works from GitHub
-  Actions; the first live run there confirms it.
-- **Real email sending** — still never exercised (no credentials, and the
-  sandbox blocks SMTP). Step 4's test-email covers it, from GitHub Actions
-  or Henry's machine.
-- **The real IrroCloud site** — REACHED (Aug 24): login page loads, form
-  matches the selectors. Only the credential rejection stands between here
-  and step 2.
-- **Claude-sandbox browser setup** — DONE (Aug 24): the code now finds the
-  pre-installed Chromium and the sandbox's egress proxy on its own
-  (`bridge/fetchers/_launch.py`; inert on GitHub Actions and normal
-  machines). Elsewhere, `playwright install --with-deps chromium` still
-  applies.
-- **The 6:00 am schedule** — CONFIRMED (Aug 24, step 1). Remember the
-  November daylight-saving line in `morning.yml`.
-- **DECISIONS.md** — updated Aug 24; the schema VERIFY item is done, the
-  parser/timezone items still wait on a real export (step 2).
+- **Helios API shapes** — verified against the live `/openapi.json`
+  (committed as `docs/helios-openapi-2026-08-24.json`); eight divergences
+  fixed, then proven by real accepted requests. The **run-save shape** was
+  read from Jacob's actual history and is fully implemented; the
+  template-match guard stays on, so a frontend reshape re-triggers a safe
+  skip rather than a bad write. Still Appendix-A provenance (harmless now,
+  all covered by live behavior): HELIOS's internal parser constants and
+  `MAX_PHYSICAL_SENSOR_COUNT`.
+- **Open-Meteo works** — from this sandbox and (untested but open-internet)
+  GitHub Actions. Helios's own NOAA enrichment is currently failing
+  server-side; the bridge's fallback covers it, but Marco may want to know.
+- **Email** — the one never-exercised stage. Step 4's remainder covers it.
+- **Claude-sandbox notes** — the code finds the sandbox's Chromium and
+  egress proxy on its own (`bridge/fetchers/_launch.py`; inert elsewhere).
+  SMTP is blocked in the sandbox; everything else now works from it.
+- **Repo size, worth watching** — the CSV endpoint returns each device's
+  FULL history, so `data/` is ~50 MB (mostly the 40 MB SQLite store) and
+  the morning workflow commits it back daily. If the repository grows
+  uncomfortably after a few weeks, ask a session to trim old raw exports
+  and/or stop committing the sqlite (the readings CSVs alone can rebuild
+  it) — a one-line workflow change.
+- **November** — remember the daylight-saving line in `morning.yml`.
+- **DECISIONS.md** — the timezone and schema VERIFY items are settled;
+  what remains open there is only the trigger placeholder.

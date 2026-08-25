@@ -172,6 +172,23 @@ class FakeIrroCloud:
                     self.end_headers()
                     self.wfile.write(body)
                     return
+                if url.path == "/csv":
+                    # The real site's endpoint (discovery, 2026-08-24):
+                    # GET /csv?&id=<device id> returns the full history.
+                    device_id = parse_qs(url.query).get("id", [""])[0]
+                    if device_id not in DEVICES:
+                        return self._send_html("<h1>Not found</h1>", status=404)
+                    body = export_csv(device_id, "", "").encode()
+                    self.send_response(200)
+                    self.send_header("Content-Type", "text/csv")
+                    self.send_header(
+                        "Content-Disposition",
+                        'attachment; filename="irrocloud_data.csv"',
+                    )
+                    self.send_header("Content-Length", str(len(body)))
+                    self.end_headers()
+                    self.wfile.write(body)
+                    return
                 self._send_html("<h1>Not found</h1>", status=404)
 
             def do_POST(self):

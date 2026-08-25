@@ -32,6 +32,12 @@ FAKE_DEVICE_NAMES = {
     "bennett-1-n": "SBF Bennett 1N",
     "whitted": "SBF Whitted",
 }
+FAKE_DEVICE_IDS = {
+    "cunningham-6": "1",
+    "rv80": "2",
+    "bennett-1-n": "3",
+    "whitted": "4",
+}
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -71,6 +77,7 @@ def make_cfg(tmp_path, base_url: str, password: str = "tension123"):
     fields_doc = json.loads((REPO_ROOT / "fields.json").read_text())
     for entry in fields_doc["fields"]:
         entry["irrocloud_device_name"] = FAKE_DEVICE_NAMES[entry["key"]]
+        entry["irrocloud_device_id"] = FAKE_DEVICE_IDS[entry["key"]]
     (root / "fields.json").write_text(json.dumps(fields_doc))
     return load_config(
         root=root,
@@ -153,7 +160,7 @@ def test_missing_device_on_site_alerts(tmp_path):
     with FakeIrroCloud() as fake:
         cfg = make_cfg(tmp_path, fake.base_url)
         field = cfg.field_by_key("rv80")
-        object.__setattr__(field, "irrocloud_device_name", "Not A Real Device")
+        object.__setattr__(field, "irrocloud_device_id", "999")
         fetcher = IrroCloudBrowserFetcher(cfg, slow_mo_ms=0, sleep=lambda s: None)
         try:
             start, end = window()
@@ -161,7 +168,22 @@ def test_missing_device_on_site_alerts(tmp_path):
                 fetcher.fetch(field, start, end)
         finally:
             fetcher.close()
-        assert "Not A Real Device" in excinfo.value.reason
+        assert "data-request-rv80" in excinfo.value.reason
+
+
+def test_missing_device_id_alerts_before_requesting(tmp_path):
+    with FakeIrroCloud() as fake:
+        cfg = make_cfg(tmp_path, fake.base_url)
+        field = cfg.field_by_key("rv80")
+        object.__setattr__(field, "irrocloud_device_id", None)
+        fetcher = IrroCloudBrowserFetcher(cfg, slow_mo_ms=0, sleep=lambda s: None)
+        try:
+            start, end = window()
+            with pytest.raises(AlertError) as excinfo:
+                fetcher.fetch(field, start, end)
+        finally:
+            fetcher.close()
+        assert "irrocloud_device_id" in excinfo.value.reason
 
 
 def test_discover_maps_the_fake_site(tmp_path):

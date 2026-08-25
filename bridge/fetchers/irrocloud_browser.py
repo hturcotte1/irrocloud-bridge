@@ -23,13 +23,17 @@ from bridge.fetchers.base import raw_export_path
 from bridge.parse import validate_export_file
 
 SELECTORS = {
-    # The fake-IrroCloud test site satisfies these; the real site's values
-    # come from the morning discovery run.
+    # Adjusted to the REAL site on 2026-08-24 (see discovery/REPORT.md); the
+    # fake-IrroCloud test site still satisfies every selector it exercises.
     "login_email": 'input[type="email"], input[name="email"]',
     "login_password": 'input[type="password"]',
     "login_submit": 'button[type="submit"], input[type="submit"]',
-    # Something that only exists once logged in:
-    "logged_in_marker": 'a[href*="devices"], a[href*="logout"]',
+    # Something that only exists once logged in. The real dashboard has the
+    # main form name="yay" and the Register-New-Device link; the fake site
+    # keeps its devices/logout nav links.
+    "logged_in_marker": (
+        'form[name="yay"], a[href="devreg"], a[href*="devices"], a[href*="logout"]'
+    ),
     "device_list_link": 'a[href*="devices"]',
     "date_start": 'input[name="start"], input#start',
     "date_end": 'input[name="end"], input#end',
@@ -37,18 +41,26 @@ SELECTORS = {
         'a:has-text("Export"), button:has-text("Export"), '
         'a:has-text("Download"), a:has-text("CSV")'
     ),
-    "logout": 'a:has-text("Log out"), a:has-text("Logout"), a[href*="logout"]'
+    # The real site's logout is a nav BUTTON whose onclick navigates to
+    # /irrocloud/logout/; the fake site keeps a plain link.
+    "logout": (
+        'button:has-text("Logout"), a:has-text("Log out"), a:has-text("Logout"), '
+        'a[href*="logout"]'
+    ),
 }
 
 # "click": drive the page's own export control with download handling (works
 #          everywhere, more moving parts).
 # "request": replay the site's own data request with the logged-in context's
 #          cookies (fewer moving parts — preferred IF discovery finds one).
-#          The morning session switches this after reading REPORT.md and fills
-#          DATA_REQUEST_TEMPLATE with the URL pattern discovery recorded,
-#          using {device}, {start}, {end} placeholders.
-STRATEGY = "click"
-DATA_REQUEST_TEMPLATE: str | None = None
+# The real site has a clean CSV endpoint (discovery, 2026-08-24): a GET of
+# csv?&id=<numeric device id> returns the device's ENTIRE history as a
+# modern-layout CSV ("Timestamp,Soil Temp,Air Temp,SM1..SM6,Switch,Rain,Batt",
+# UTC timestamps with explicit +00:00). {device_id} comes from fields.json's
+# irrocloud_device_id; {device}/{start}/{end} stay available for templates
+# that need them. The URL is resolved against IRROCLOUD_URL.
+STRATEGY = "request"
+DATA_REQUEST_TEMPLATE: str | None = "csv?&id={device_id}"
 
 # ==========================================================================
 # End of the morning-adjustment section.
@@ -263,11 +275,23 @@ class IrroCloudBrowserFetcher:
     def _fetch_via_request(self, field: FieldConfig, start: date, end: date) -> Path:
         """Replay the site's own data request using the logged-in context's
         cookies. Enabled by the morning session via STRATEGY/DATA_REQUEST_TEMPLATE."""
+        from urllib.parse import urljoin
+
+        if "{device_id}" in DATA_REQUEST_TEMPLATE and not field.irrocloud_device_id:
+            raise AlertError(
+                f"fields.json has no irrocloud_device_id for {field.name}, but "
+                "the data-request URL needs one. Run `python -m bridge.cli "
+                "discover` and fill it in."
+            )
         page = self._page
-        url = DATA_REQUEST_TEMPLATE.format(
-            device=field.irrocloud_device_name,
-            start=start.isoformat(),
-            end=end.isoformat(),
+        url = urljoin(
+            self.cfg.irrocloud_url + "/",
+            DATA_REQUEST_TEMPLATE.format(
+                device=field.irrocloud_device_name,
+                device_id=field.irrocloud_device_id,
+                start=start.isoformat(),
+                end=end.isoformat(),
+            ),
         )
         out_path = raw_export_path(self.cfg, field.key, datetime.now(UTC))
 

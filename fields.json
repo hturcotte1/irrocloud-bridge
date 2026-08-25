@@ -1,5 +1,5 @@
 {
-  "_comment": "One entry per field. 'key' must match the field_key in Jacob's Helios account (lowercase). 'irrocloud_device_name' is the device name exactly as the IrroCloud website shows it — the morning discovery run fills these in. 'probes' maps probe letter to role: 'pivot' (under the pivot; used for the headline numbers) or 'handline' (in handlines; shown but excluded from the headline). REPLACE_ME means a human must answer. 'trigger_cb' is Jacob's irrigation trigger number in centibars; REPLACE_ME uses a placeholder of 50 and says so in every email.",
+  "_comment": "One entry per field. 'key' is the bridge's internal id; 'helios_field_key' is the field_key in Jacob's Helios account (his account uses field-1..field-4). 'irrocloud_device_name' and 'irrocloud_device_id' are the device exactly as the IrroCloud site shows it (mapped from the real site on 2026-08-24 — see discovery/REPORT.md). 'probes' maps probe letter to role: 'pivot' (under the pivot; used for the headline numbers) or 'handline'. On the real site the handline sensors turned out to be SEPARATE DEVICES ('SB Bennett 1 N HLS', 'SB Whitted SS') which the bridge does not fetch, so every probe on the pivot devices is pivot. 'trigger_cb' is Jacob's irrigation trigger number in centibars; REPLACE_ME uses a placeholder of 50 and says so in every email.",
   "timezone": "America/Boise",
   "fields": [
     {
@@ -11,7 +11,9 @@
       "lat": 43.008861,
       "lon": -116.145528,
       "planted": "2026-05-02",
-      "irrocloud_device_name": "REPLACE_ME",
+      "irrocloud_device_name": "SB Cunningham 6",
+      "irrocloud_device_id": "1332",
+      "helios_field_key": "field-4",
       "probes": { "a": "pivot", "b": "pivot", "c": "pivot" },
       "trigger_cb": "REPLACE_ME"
     },
@@ -24,7 +26,9 @@
       "lat": 43.036389,
       "lon": -116.193333,
       "planted": "2026-04-09",
-      "irrocloud_device_name": "REPLACE_ME",
+      "irrocloud_device_name": "SB RV 80",
+      "irrocloud_device_id": "2083",
+      "helios_field_key": "field-1",
       "probes": { "a": "pivot", "b": "pivot", "c": "pivot" },
       "trigger_cb": "REPLACE_ME"
     },
@@ -37,9 +41,11 @@
       "lat": 43.04075,
       "lon": -116.102917,
       "planted": "2026-03-30",
-      "irrocloud_device_name": "REPLACE_ME",
-      "probes": { "a": "REPLACE_ME", "b": "REPLACE_ME", "c": "REPLACE_ME" },
-      "probes_note": "One probe ('HLS') is in the handlines, not the pivot portion. Which letter that is comes from the morning discovery run; until then all probes are treated as pivot.",
+      "irrocloud_device_name": "SB Bennett 1 N",
+      "irrocloud_device_id": "2424",
+      "helios_field_key": "field-2",
+      "probes": { "a": "pivot", "b": "pivot", "c": "pivot" },
+      "probes_note": "The handline sensors ('HLS') are a separate IrroCloud device (SB Bennett 1 N HLS, id 1355) that the bridge does not fetch, so all probes here are pivot.",
       "trigger_cb": "REPLACE_ME"
     },
     {
@@ -51,9 +57,11 @@
       "lat": 43.037056,
       "lon": -116.132,
       "planted": "2026-04-15",
-      "irrocloud_device_name": "REPLACE_ME",
-      "probes": { "a": "REPLACE_ME", "b": "REPLACE_ME", "c": "REPLACE_ME" },
-      "probes_note": "One probe ('SS') is in solid-set handlines left out all season. Which letter that is comes from the morning discovery run; until then all probes are treated as pivot.",
+      "irrocloud_device_name": "SB Whitted",
+      "irrocloud_device_id": "2365",
+      "helios_field_key": "field-3",
+      "probes": { "a": "pivot", "b": "pivot", "c": "pivot" },
+      "probes_note": "The solid-set handline sensors ('SS') are a separate IrroCloud device (SB Whitted SS, id 2254) that the bridge does not fetch, so all probes here are pivot.",
       "trigger_cb": "REPLACE_ME"
     }
   ]

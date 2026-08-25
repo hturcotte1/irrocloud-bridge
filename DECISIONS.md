@@ -27,9 +27,12 @@ NEXT.md. "The brief" is the build document this repo was built from.
 3. **Export timestamps with no timezone are treated as Boise local time**
    (`America/Boise`). HELIOS's own parser assumed UTC; for a grower-facing
    morning email, local time is the safer default, and the discovery run
-   collects evidence to settle it. **VERIFY** against a real export. The two
-   odd daylight-saving hours a year (one skipped, one doubled) are dropped
-   rather than guessed.
+   collects evidence to settle it. ~~**VERIFY** against a real export.~~
+   **SETTLED (Aug 24, real export):** the real site's CSVs carry explicit
+   `+00:00` offsets on every timestamp, so nothing is naive and the
+   assumption never fires — the parser reads them as the UTC instants they
+   are, and emails still render in Boise time. The two odd daylight-saving
+   hours a year (one skipped, one doubled) are dropped rather than guessed.
 4. **254-sentinel and negative readings are dropped entirely, not stored.**
    The run log records how many were dropped. Readings above 240 are stored
    as 240 with the flag `clipped` (matching HELIOS's clip rule), and that

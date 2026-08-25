@@ -1,0 +1,55 @@
+{
+  "run_date_local": "2026-08-24",
+  "now_utc": "2026-08-25T00:07:00.920825+00:00",
+  "status": "WARN",
+  "stages": {
+    "fetch": {
+      "status": "OK",
+      "detail": "4/4 fields, 0 new readings"
+    },
+    "analyze": {
+      "status": "OK",
+      "detail": "4/4 fields have data",
+      "through": "5:55 pm"
+    },
+    "weather": {
+      "status": "WARN",
+      "detail": "3/4 forecasts from Open-Meteo"
+    },
+    "helios": {
+      "status": "WARN",
+      "detail": "3/4 forecasts"
+    },
+    "message": {
+      "status": "OK",
+      "detail": "Jacob email composed"
+    },
+    "notify": {
+      "status": "OK",
+      "detail": "written to outbox/2026-08-24T1807-jacob-email.txt"
+    },
+    "status-email": {
+      "status": "OK",
+      "detail": "written to outbox/2026-08-24T1807-status-email.txt"
+    }
+  },
+  "warnings": [
+    "Cunningham 6: Helios unreachable after retries: Server error '502 Bad Gateway' for url 'https://irrigant-helios.up.railway.app/web/predict'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/502",
+    "RV80: Helios needed our Open-Meteo weather (its own weather source failed).",
+    "Bennett 1 N: Helios needed our Open-Meteo weather (its own weather source failed).",
+    "Whitted: Helios needed our Open-Meteo weather (its own weather source failed)."
+  ],
+  "readings_through": "5:55 pm",
+  "fields_with_data": 4,
+  "helios_run_ids": [
+    "bridge-field-1-2026-08-24",
+    "bridge-field-2-2026-08-24",
+    "bridge-field-3-2026-08-24"
+  ],
+  "parse": {
+    "cunningham-6": "modern layout: 7253 rows in file, 7028 timestamps kept, 42168 sensor readings; dropped 1350 bad-sensor 254s, 0 negatives, 0 bad timestamps, 225 empty rows, 0 duplicate timestamps; clipped 6 readings above 240.",
+    "rv80": "modern layout: 6547 rows in file, 6537 timestamps kept, 39098 sensor readings; dropped 184 bad-sensor 254s, 0 negatives, 0 bad timestamps, 10 empty rows, 0 duplicate timestamps; clipped 42 readings above 240.",
+    "bennett-1-n": "modern layout: 6775 rows in file, 6602 timestamps kept, 39607 sensor readings; dropped 1043 bad-sensor 254s, 0 negatives, 0 bad timestamps, 173 empty rows, 0 duplicate timestamps; clipped 1295 readings above 240.",
+    "whitted": "modern layout: 6715 rows in file, 6714 timestamps kept, 40282 sensor readings; dropped 8 bad-sensor 254s, 0 negatives, 0 bad timestamps, 1 empty rows, 0 duplicate timestamps; clipped 1805 readings above 240."
+  }
+}

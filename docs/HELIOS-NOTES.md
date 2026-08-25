@@ -137,11 +137,17 @@ Begins with `id` (string), `title` ("<field name> • <page title>"), `timestamp
 `prompt`, `decision`, `measurementType`, `recommendedAmountIn`, `uncappedNeedIn`,
 `caps`, `bindingConstraint`, `finalAmountIn`, `dripRuntime`, `timingWindow`, and
 continues with more fields derived from the response and the field inputs. **The full
-function was not available tonight.** The bridge therefore templates the shape at
-runtime: before saving, it calls `GET /web/runs` and uses the newest `run_history`
-entry as the shape template; if the shape cannot be confirmed, it skips the save and
-logs why instead of writing garbage into Jacob's history. Morning task: read
-`mapApiRun` from the snapshot and confirm/extend `bridge/helios.py::build_run_object`.
+function was not available overnight**, so the bridge templates the shape at runtime:
+before saving, it calls `GET /web/runs` and compares its run object's keys against the
+newest `run_history` entry; on mismatch it skips the save and logs why.
+
+**Resolved (evening of 2026-08-24):** the full 36-key shape was read from the newest
+entry in Jacob's real run history and `build_run_object` now emits all of it (API
+sub-objects camelized the way `mapApiRun` does; `copyText`/`summary`/`inputSnapshot`/
+`sourceLabel` are honest bridge-composed equivalents). Live saves succeed, land in his
+history as `bridge-<field>-<date>`, and a same-day re-run overwrites rather than
+duplicates (verified live). The template-match guard stays on, so a future frontend
+reshape re-triggers the safe skip instead of writing a stale shape.
 
 ## Field metadata (`data/pilot/irrocloud/field_metadata.json`)
 

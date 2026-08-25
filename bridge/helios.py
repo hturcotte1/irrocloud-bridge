@@ -183,26 +183,85 @@ def weather_patch_from_snapshot(
     )
 
 
+def _camel(key: str) -> str:
+    parts = key.split("_")
+    return parts[0] + "".join(p[:1].upper() + p[1:] for p in parts[1:])
+
+
+def _camelize(value):
+    """Recursively rename snake_case dict keys to camelCase, the way the
+    Helios frontend's mapApiRun does with API sub-objects. Keys without
+    underscores (zone labels like '12 inch Average') pass through unchanged."""
+    if isinstance(value, dict):
+        return {_camel(k): _camelize(v) for k, v in value.items()}
+    if isinstance(value, list):
+        return [_camelize(v) for v in value]
+    return value
+
+
 def build_run_object(
     field_setup: dict,
     response: dict,
     run_date_local: str,
     timestamp_iso: str,
+    payload: dict | None = None,
 ) -> dict:
-    """The known beginning of ``mapApiRun`` (Appendix A). The full function was
-    not available tonight; the live save path refuses to POST unless this shape
-    matches the newest run in Jacob's history exactly (see save_run)."""
+    """Mirror of ``mapApiRun``'s run object, extended on 2026-08-24 to the
+    full shape read from the newest entry in Jacob's real run history
+    (``GET /web/runs``; the live save path still refuses to POST unless the
+    keys match that history exactly — see save_run). Values come from the
+    validated prediction response; the frontend-composed extras (copyText,
+    summary, inputSnapshot, sourceLabel) are honest bridge equivalents."""
     predicted = response.get("predicted_moisture") or {}
+    explanation = response.get("explanation") or {}
+    evidence = response.get("validation_evidence") or {}
+    drivers_doc = response.get("forecast_drivers") or {}
+    reference_et = response.get("reference_et") or {}
+    field_name = field_setup.get("field_name", field_setup["field_key"])
+    prompt = (
+        f"Automated morning check of {field_name} "
+        "from IrroCloud sensor readings (temporary bridge)."
+    )
+    readings = (payload or {}).get("soil_moisture_readings") or []
+    sensor_ids = sorted({r.get("sensor_id") for r in readings if r.get("sensor_id")})
+
+    review_reason = explanation.get("review_gate_reason")
+    decision = response.get("decision")
+    amount = response.get("final_amount_in")
+    timing = response.get("timing_window")
+    summary_bits = [f"{field_name}: {str(decision or 'no decision').upper()}."]
+    if decision == "water" and amount:
+        summary_bits.append(f"Apply {amount} in during {timing} only after review.")
+    if review_reason:
+        summary_bits.append(review_reason)
+    summary = " ".join(summary_bits)
+
+    copy_lines = [
+        f"Run: {field_name} • Morning bridge",
+        f"Timestamp: {timestamp_iso}",
+        f"Decision: {str(decision or '—').upper()}",
+        f"Recommended amount: {response.get('recommended_amount_in')} in",
+        f"Timing window: {timing}",
+        f"Heuristic confidence: {response.get('confidence_score')}",
+        f"Stress probability: {explanation.get('stress_probability')}",
+        f"Forecast source: {response.get('forecast_source')}",
+        f"Forecast 24h: {predicted.get('moisture_24h')} cb",
+        f"Forecast 48h: {predicted.get('moisture_48h')} cb",
+        f"Forecast 72h: {predicted.get('moisture_72h')} cb",
+        "Measurement: soil water tension (centibars). Higher tension means drier soil.",
+        f"Driving zone: {explanation.get('driving_zone')}",
+        f"Operator review required: {explanation.get('operator_review_required')}",
+        f"Review gate: {review_reason}",
+        "Saved by the IrroCloud → Helios morning bridge (automated).",
+    ]
+
     return {
         # Deterministic id: a same-day re-run overwrites instead of duplicating.
         "id": f"bridge-{field_setup['field_key']}-{run_date_local}",
-        "title": f"{field_setup.get('field_name', field_setup['field_key'])} • Morning bridge",
+        "title": f"{field_name} • Morning bridge",
         "timestamp": timestamp_iso,
-        "prompt": (
-            f"Automated morning check of {field_setup.get('field_name')} "
-            "from IrroCloud sensor readings (temporary bridge)."
-        ),
-        "decision": response.get("decision"),
+        "prompt": prompt,
+        "decision": decision,
         # The fallback mirrors the live schema's default (VWC), but in practice
         # the field is always present: runs are only saved for responses that
         # passed the tension gate in _result_from_response.
@@ -211,9 +270,67 @@ def build_run_object(
         "uncappedNeedIn": response.get("uncapped_need_in"),
         "caps": response.get("caps"),
         "bindingConstraint": response.get("binding_constraint"),
-        "finalAmountIn": response.get("final_amount_in"),
-        "dripRuntime": None,
-        "timingWindow": response.get("timing_window"),
+        "finalAmountIn": amount,
+        "dripRuntime": _camelize(response.get("drip_runtime")),
+        "timingWindow": timing,
+        # ---- the rest of mapApiRun's shape (from Jacob's history) ----------
+        "sourceLabel": "Morning bridge (automated)",
+        "summary": summary,
+        "copyText": "\n".join(copy_lines),
+        "confidenceScore": response.get("confidence_score"),
+        "stressProbability": explanation.get("stress_probability"),
+        "drivers": explanation.get("drivers") or [],
+        "drivingZone": explanation.get("driving_zone"),
+        "zoneMoistureSummary": explanation.get("zone_moisture_summary") or {},
+        "highVariabilityFlag": explanation.get("high_variability_flag", False),
+        "operatorReviewRequired": explanation.get("operator_review_required", True),
+        "reviewGateReason": review_reason,
+        "configurationBlocker": explanation.get("configuration_blocker"),
+        "estimatedEtIn": reference_et.get("value") if isinstance(reference_et, dict) else None,
+        "etSource": response.get("et_source"),
+        "forecastSource": response.get("forecast_source"),
+        "forecastDrivers48h": _camelize(drivers_doc.get("drivers_48h") or []),
+        "forecastUncertainty": _camelize(response.get("forecast_uncertainty")),
+        "predicted": {
+            "moisture24h": predicted.get("moisture_24h"),
+            "moisture48h": predicted.get("moisture_48h"),
+            "moisture72h": predicted.get("moisture_72h"),
+        },
+        "physicsBaseline": _camelize(response.get("physics_baseline")),
+        "recommendationAdjustment": _camelize(response.get("recommendation_adjustment")),
+        "regionalInsights": _camelize(response.get("regional_insights")),
+        "validationEvidence": _camelize(evidence),
+        "backendSnapshot": {
+            "modelHash": evidence.get("model_artifact_hash"),
+            "apiVersion": None,
+            "trainingDate": evidence.get("model_training_date"),
+            "validationMode": evidence.get("validation_mode"),
+        },
+        "inputSnapshot": {
+            "model": "Helios Core",
+            "farmId": field_setup.get("field_key"),
+            "fieldName": field_name,
+            "cropType": field_setup.get("crop_type"),
+            "growthStage": field_setup.get("growth_stage"),
+            "canopyStatus": "active",
+            "soilTexture": field_setup.get("soil_texture"),
+            "drainageClass": field_setup.get("drainage_class"),
+            "infiltrationRate": field_setup.get("infiltration_rate"),
+            "slopePct": field_setup.get("slope_pct"),
+            "irrigationType": field_setup.get("irrigation_type"),
+            "pumpCapacity": field_setup.get("pump_capacity"),
+            "fieldAreaAcres": field_setup.get("field_area_acres"),
+            "budgetDollars": field_setup.get("budget_dollars"),
+            "budgetConstraintEnabled": field_setup.get("budget_constraint_enabled"),
+            "locationLat": field_setup.get("location_lat"),
+            "locationLon": field_setup.get("location_lon"),
+            "measurementType": "soil_water_tension",
+            "sensorCount": len(sensor_ids),
+            "sensorIds": sensor_ids,
+            "readingsInRequest": len(readings),
+            "analysisPrompt": prompt,
+            "autoSave": True,
+        },
     }
 
 
@@ -425,7 +542,13 @@ class LiveHelios:
                 "fields must exist in Helios first — not creating them on my "
                 "own; Henry decides."
             )
-        missing = [f.key for f in fields if f.key not in by_key]
+        # Jacob's account names its fields field-1..field-4; fields.json maps
+        # each bridge key to that via helios_field_key (falling back to the
+        # bridge key for accounts that use the same names).
+        wanted = {f.key: (f.helios_field_key or f.key).lower() for f in fields}
+        missing = [
+            f"{key} (helios key '{hk}')" for key, hk in wanted.items() if hk not in by_key
+        ]
         if missing:
             raise AlertError(
                 "These fields from fields.json are not in the Helios account: "
@@ -434,7 +557,7 @@ class LiveHelios:
                 "fields: "
                 + (", ".join(sorted(by_key)) or "(none)")
             )
-        return {f.key: by_key[f.key] for f in fields}
+        return {key: by_key[hk] for key, hk in wanted.items()}
 
     def predict(
         self, payload: dict, weather_snapshot: WeatherSnapshot | None = None
@@ -552,7 +675,11 @@ def run_helios_for_field(
     result.weather_was_caller_supplied = caller_weather
 
     run_obj = build_run_object(
-        field_setup, result.response, run_date_local, pd.Timestamp(now_utc).isoformat()
+        field_setup,
+        result.response,
+        run_date_local,
+        pd.Timestamp(now_utc).isoformat(),
+        payload=payload,
     )
     result.run_id = run_obj["id"]
     result.save_status, result.save_detail = session.save_run(run_obj)

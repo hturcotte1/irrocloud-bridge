@@ -110,6 +110,8 @@ class FieldConfig:
     probes_note: str | None
     trigger_cb: float
     trigger_is_placeholder: bool
+    irrocloud_device_id: str | None = None  # the site's numeric device id
+    helios_field_key: str | None = None  # the field_key in Jacob's Helios account
 
     def handline_probes(self) -> set[str]:
         """Probe letters marked handline — shown in emails but excluded from the
@@ -294,6 +296,8 @@ def _load_field(entry: dict, index: int) -> FieldConfig:
         lon=float(need("lon")),
         planted=str(need("planted")),
         irrocloud_device_name=_clean(entry.get("irrocloud_device_name")),
+        irrocloud_device_id=_clean(str(entry.get("irrocloud_device_id") or "")),
+        helios_field_key=_clean(entry.get("helios_field_key")),
         probes=probes,
         probes_note=_clean(entry.get("probes_note")),
         trigger_cb=trigger_cb,

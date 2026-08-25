@@ -162,9 +162,71 @@ def run_discovery(cfg: Config, headless: bool = True) -> int:
                 if text or href:
                     report["nav_links"].append({"text": text[:80], "href": href[:200]})
 
-            # 4. The device list: open each device, record names and sensors.
+            # 4a. The REAL site's layout (seen 2026-08-24): one dashboard page
+            # whose device table wires each graph icon to
+            # loadFullVisualization('sample','image','0','<id>','<name>',…),
+            # and a CSV endpoint at csv?&id=<id>. If that pattern is present,
+            # read the device list straight out of the markup and sample the
+            # CSV via the logged-in context — no clicking required.
+            import html as html_mod
+
+            # Read the RAW server HTML, not the live DOM: the dashboard's
+            # DataTable paginates by removing off-page rows from the DOM, so
+            # page.content() only shows the first ten devices.
+            content = ""
+            try:
+                raw = page.context.request.get(page.url, timeout=STEP_TIMEOUT_MS)
+                if raw.ok:
+                    content = raw.text()
+            except Exception:  # noqa: BLE001 — fall back to the rendered DOM
+                pass
+            content = content or page.content() or ""
+            real_matches = re.findall(
+                r"loadFullVisualization\('sample','image','[^']*','(\d+)','([^']*)'",
+                content,
+            )
+            if real_matches:
+                by_id: dict[str, str] = {}
+                for device_id, raw_name in real_matches:
+                    by_id.setdefault(device_id, html_mod.unescape(raw_name))
+                for device_id, name in sorted(by_id.items(), key=lambda kv: kv[1]):
+                    report["devices"].append(
+                        {
+                            "link_text": name,
+                            "href": f"csv?&id={device_id}",
+                            "device_id": device_id,
+                            "title": page.title(),
+                            "sensor_labels_seen": [],
+                            "time_strings_seen": [],
+                        }
+                    )
+                first_id, first_name = sorted(
+                    by_id.items(), key=lambda kv: kv[1]
+                )[0]
+                try:
+                    response = page.context.request.get(
+                        _absolute(page.url, f"csv?&id={first_id}"),
+                        timeout=STEP_TIMEOUT_MS,
+                    )
+                    if not response.ok:
+                        raise RuntimeError(f"HTTP {response.status}")
+                    sample = out / "sample-export.csv"
+                    sample.write_bytes(response.body())
+                    first_lines = sample.read_text(errors="replace").splitlines()[:10]
+                    report["export"] = {
+                        "device": first_name,
+                        "saved_as": "discovery/sample-export.csv",
+                        "first_lines": first_lines,
+                        "date_range_tried": "(full history — csv endpoint takes no dates)",
+                    }
+                except Exception as exc:  # noqa: BLE001
+                    report["problems"].append(f"csv?&id= sample fetch failed: {exc}")
+
+            # 4b. Generic layout: open each device link, record names/sensors.
             device_links = []
-            for link in report["nav_links"]:
+            # (skipped entirely when 4a already read the real dashboard —
+            # crawling it would wander into Register-New-Device and friends)
+            for link in [] if real_matches else report["nav_links"]:
                 if DEVICE_LINK_HINT.search(link["text"] or "") or DEVICE_LINK_HINT.search(
                     link["href"] or ""
                 ):
@@ -178,7 +240,7 @@ def run_discovery(cfg: Config, headless: bool = True) -> int:
                 )
                 page.wait_for_load_state("networkidle", timeout=STEP_TIMEOUT_MS)
             candidates = []
-            for link in page.locator("a").all():
+            for link in [] if real_matches else page.locator("a").all():
                 try:
                     text = (link.inner_text() or "").strip()
                     href = link.get_attribute("href") or ""
@@ -357,8 +419,10 @@ def _render_report(cfg: Config, report: dict) -> str:
         "",
     ]
     for device in report["devices"]:
+        device_id = device.get("device_id")
+        id_note = f", device id **{device_id}**" if device_id else ""
         lines.append(
-            f"- **{device['link_text']}** (href `{device['href']}`, title "
+            f"- **{device['link_text']}** (href `{device['href']}`{id_note}, title "
             f"'{device['title']}'); sensor labels: "
             f"{', '.join(device['sensor_labels_seen']) or 'none seen'}"
         )
